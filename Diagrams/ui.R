@@ -12,79 +12,121 @@ library(shinyjs)
 library(shinyBS)
 library(shinydashboard)
 library(shinythemes)
+library(colourpicker)
 # Define UI for application
 shinyUI(
   navbarPage( theme = shinytheme("lumen"), windowTitle = "Biocore",
               img( src = 'logo.png', height = "45", style = "position: relative; top: -10px;" ),
-              position = "static-top", inverse = TRUE,
+              position = "static-top", inverse = TRUE, useShinyjs(),
+              ##Home view
     tabPanel( title = "Home", icon = icon("home"),
       box(width = 2),
-      box(width = 8, box( width = 12, style = "border-bottom: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB;
-                          border-radius: 1em; height: 88vh;", img( src = 'biocore-logo.png', height = "70"))),
+      box(width = 8, style = "border-bottom: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB;
+                          border-radius: 1em; height: 88vh;",
+                    box(width = 2,
+                      img( src = 'biocore-logo.png', height = "70")
+                      )
+                    ),
       box(width = 2)
-    ),
+    ), ##Heatmap view
     tabPanel( title = "Heatmap", icon = icon("bar-chart-o"),
              value = useShinyjs(),
-             #Inputs for matrix count
+             ## container box
              box( style = "color: #5DADE2;",
+                  #Control error
+                  box( textOutput("error_content"),bsAlert("error_message"), width = 12),
+                  ###Inputs for matrix count
                box(  h1("Configure your plot", style = "color: #707B7C;"),
                  fileInput("heatmap_matrix", "Upload your matrix count", accept = ".txt"),
-                 textInput("titlematrix", "Title of first heatmap"),
-                 selectInput("scalefull", "Scale", choices = c("none", "row", "column"), selected = "none"),
-                 checkboxInput("hide_label_matrix", "Hide label", value = FALSE), 
-                 width = 12, style = "border-right: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB; 
-                                      border-top-right-radius: 1em;padding : 0.5em; margin-bottom: 1em;"
-               ),#Inputs for selected genes
-               br(),
-               box(
                  fileInput("heat_genlist", "Upload a list of genes", accept = ".txt"),
-                 textInput("title_new_one", "Title of first heatmap"),
-                 selectInput("scale_selected_gens", "Scale", choices = c("none", "row", "column"), selected = "none"),
-                 checkboxInput("hide_label_selected", "Hide label", value = FALSE),
-                 width = 12, style = "border-right: 4px solid #D5DBDB; padding : 0.5em; margin-bottom: 1em;"
-               ),#Action buttons
-               box( 
+                 textAreaInput("genlist", "Paste genes", width = 150, height = 200),
+                 textInput("titlematrix", "Title of heatmap"),
+                 checkboxGroupInput("clustering", "Clustering", choices= c("a","b"),
+                                    inline = TRUE),
+                 checkboxGroupInput("dendogram", "show/hide dendograms", choices= c("a","b"),
+                                    inline = TRUE),
+                 checkboxGroupInput("samples", "show/hide samples", choices= c("a","b","c"),
+                              inline = TRUE),
+                 radioButtons("id_column", "Select the ID column", choices = list("A","B","C"), selected = NULL,
+                              inline = TRUE),
+                 selectInput("scalefull", "Scale", choices = c("none", "row", "column"), selected = "none"),
+                 checkboxInput("hide_label_matrix", "Hide row label", value = FALSE),
+                 selectInput("heat_col", "Select colour: ", choices = c("heat.colors",
+                                                                        "terrain.colors",
+                                                                        "topo.colors",
+                                                                        "cm.colors",
+                                                                        "bluered",
+                                                                        "redblue")),
                  actionButton('heat', 'Contrast', icon("bar-chart-o")),br(),
-                 actionButton('reset1', 'Reset', icon("refresh")),br(),br(),
-                 actionButton("tabBut", "Show table", icon("table")),br(),
-                 downloadButton("download1", "Generate report"),
-                 textOutput("hola"), # this is just for testing.
-                 width = 12, style = "border-right: 4px solid #D5DBDB; border-bottom: 4px solid #D5DBDB;
-                                      border-bottom-right-radius: 1em; padding : 0.5em;"
+                 selectInput("format", "Select format", choices = c("pdf", "jpeg", "png", "tiff", "bmp")),
+                 numericInput("width", "choose width: ", value = 0),
+                 numericInput("height", "choose height: ", value = 0),
+                 downloadButton("downloadHeat", "Generate report"),
+                 width = 12, style = "border-right: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB; border-bottom: 4px solid #D5DBDB;
+                                      border-top-right-radius: 1em; border-bottom-right-radius: 1em;
+                                      padding : 0.5em; margin-bottom: 1em;"
                ),
+               br(),
+               ##Container of buttons
+               box( textOutput("hola")),
                width = 3, style = "border-radius: 1em;"
                ),
              box( style = "border-top: 4px solid #D5DBDB; border-bottom: 4px solid #D5DBDB; border-left: 4px solid #D5DBDB;
                           height: 88vh; border-radius: 1em;",
-               box( plotOutput("distPlot"), status = "primary", width = 11),br(),
-               box( plotOutput("newOne"), status = "warning", width = 11, style = "margin-top : 50px"),
-               bsModal("modalExample", "Data Table", "tabBut", size = "large", dataTableOutput("tabledgenes")),
+               box( plotOutput("distPlot", height = "82vh"), width = 11),
              width = 9)
              ),
+    ##VennDiagram view
     tabPanel(title = "VennDiagram", icon = icon("adjust")
-             ,box( style = "color: #5DADE2;", width = 3, style = "border-radius: 1em;",
+             ##Container box
+             ,box( style = "color: #5DADE2;", width = 6, style = "border-radius: 1em;",
                    #Inputs for selected genes
-                   box(  h1("Configure your plot", style = "color: #707B7C;"),
-                         fileInput("venn_matrix", "Upload your matrix count", accept = ".txt"),
-                         fileInput("venn_genlist1", "Upload a list of genes", accept = ".txt"),
-                         fileInput("venn_genlist2", "Upload a list of genes", accept = ".txt"),
-                         width = 12, style = "border-right: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB; 
-                                      border-top-right-radius: 1em;padding : 0.5em; margin-bottom: 1em;"
-                      ),
-                   br(),#Action buttons
-                   box( 
-                     actionButton('venn', 'Contrast', icon("bar-chart-o")),br(),
-                     actionButton('reset2', 'Reset', icon("refresh")),br(),br(),
-                     actionButton("tabBut2", "Show table", icon("table")),br(),
-                     downloadButton("download2", "Generate report"),
-                     width = 12, style = "border-right: 4px solid #D5DBDB; border-bottom: 4px solid #D5DBDB;
-                                      border-bottom-right-radius: 1em; padding : 0.5em;"
+                   box( h1("Configure your plot", style = "color: #707B7C;"), 
+                        box(id = "input1", width = 6,  
+                           textInput("title_genlist1", "Name the selection", "name1"),
+                           fileInput("venn_genlist1", "Upload a list of genes", accept = ".txt"),
+                           textAreaInput("genlist1", "Paste genes", width = 150, height = 100),
+                           colourInput("col1", "Select colour", "lightblue", allowTransparent = TRUE),
+                           actionButton('add2', 'Add', icon("fas fa-plus"))
+                          ),
+                        box( id ="input2", width = 6, collapsible = TRUE,
+                             textInput("title_genlist2", "Name the selection", "name2"),
+                             fileInput("venn_genlist2", "Upload a list of genes", accept = ".txt"),
+                             textAreaInput("genlist2", "Paste genes", width = 150, height = 100),
+                             colourInput("col2", "Select colour", "pink", allowTransparent = TRUE),
+                             actionButton('add3', 'Add', icon("fas fa-plus"))
+                          ),
+                        box(id = "input3", width = 6, collapsible = TRUE,
+                             textInput("title_genlist3", "Name the selection", "name3"),
+                             fileInput("venn_genlist3", "Upload a list of genes", accept = ".txt"),
+                             textAreaInput("genlist3", "Paste genes", width = 250, height = 100),
+                             colourInput("col3", "Select colour", "green", allowTransparent = TRUE),
+                             actionButton('add4', 'Add', icon("fas fa-plus"))
+                          ),
+                        box(id = "input4", width = 6, collapsible = TRUE,
+                          textInput("title_genlist4", "Name the selection", "name4"),
+                          fileInput("venn_genlist4", "Upload a list of genes", accept = ".txt"),
+                          textAreaInput("genlist4", "Paste genes", width = 250, height = 100),
+                          colourInput("col4", "Select colour", "yellow", allowTransparent = TRUE)
+                        ),
+                        br(),
+                        box(
+                          actionButton('venn', 'Contrast', icon("bar-chart-o")),
+                          downloadButton("downloadVenn", "Generate report", icon("fas fa-download")),
+                          style = "bottom: 0px;"
+                        ),
+                        width = 12, style = "border-right: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB; 
+                                      border-top-right-radius: 1em; border-bottom-right-radius: 1em; 
+                                      padding: 0.5em; margin-bottom: 1em; border-bottom: 4px solid #D5DBDB;
+                                      height: 91vh;"
                       )
                   ),
-             box(
-               box( plotOutput("vennDiagram") )
-             )
-             )
+             box( style = "border: 4px solid #D5DBDB;
+                          height: 88vh; border-radius: 1em;",
+               box( plotOutput("vennDiagram", height = "84vh"), width = 12),
+               width = 6
+               )
+          )
   )
 )
 

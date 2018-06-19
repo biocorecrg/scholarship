@@ -7,217 +7,352 @@
 #    http://shiny.rstudio.com/
 #
 
+#import libraries to use
 library(shiny)
+library(shinyjs)
 library(gplots)
 library(VennDiagram)
+
+
 # Define server logic
-shinyServer(function(input, output) {
-   
+shinyServer(function(input, output, session) {
+  
   #Put all the inputs to null again
   observeEvent(input$reset1, {
     output$distPlot <- renderPlot({NULL})
     output$newOne <- renderPlot({NULL})
     output$tabledgenes <- renderDataTable({NULL})
-    reset('matrix')
-    reset('genlist')
+    reset('heatmap_matrix')
+    reset('heat_genlist')
+  })
+  
+  
+  observeEvent(input$add2, {
+    if(input$add2 %% 2 == 1){
+      shinyjs::hide(id = "input2")
+    }else{
+      shinyjs::show(id = "input2")
+    }
+  })
+  observeEvent(input$add3, {
+    if(input$add3 %% 2 == 1){
+      shinyjs::hide(id = "input3")
+    }else{
+      shinyjs::show(id = "input3")
+    }
+  })
+  observeEvent(input$add4, {
+    if(input$add4 %% 2 == 1){
+      shinyjs::hide(id = "input4")
+    }else{
+      shinyjs::show(id = "input4")
+    }
+  })
+  
+  observe({
+    x <- 0
+    y <- 0
+    if(!is.null(input$heatmap_matrix)){
+      path <- input$heatmap_matrix
+      df <- read.delim(file = path$datapath, sep = "\t", header = TRUE, as.is = TRUE)
+      x <- as.vector(colnames(df)[sapply(df, class) == "numeric"])
+      updateCheckboxGroupInput(session, "samples",
+                         choices = x, selected = x, inline = TRUE)
+      y <- as.vector(colnames(df)[sapply(df, class) == "character"])
+      updateRadioButtons(session, "id_column",
+                         choices = y, inline = TRUE)
+      updateCheckboxGroupInput(session, "clustering", choices = c("Rowv", "Colv"), inline = TRUE)
+      updateCheckboxGroupInput(session, "dendogram", choices = c("Rowv", "Colv"), inline = TRUE)
+    }
+    #Updating textarea with selected genes uploaded from file.
+    if(!is.null(input$heat_genlist)){
+      path <- input$heat_genlist
+      list <- scan(path$datapath, what = "character")
+      updateTextAreaInput(session, "genlist", value = list)
+    }
+    
+    if(!is.null(input$venn_genlist1)){
+      path <- input$venn_genlist1
+      list <- scan(path$datapath, what = "character")
+      updateTextAreaInput(session, "genlist1", value = list)
+    }
+    
+    if(!is.null(input$venn_genlist2)){
+      path <- input$venn_genlist2
+      list <- scan(path$datapath, what = "character")
+      updateTextAreaInput(session, "genlist2", value = list)
+    }
+    
+    if(!is.null(input$venn_genlist3)){
+      path <- input$venn_genlist3
+      list <- scan(path$datapath, what = "character")
+      updateTextAreaInput(session, "genlist3", value = list)
+    }
+    
+    if(!is.null(input$venn_genlist4)){
+      path <- input$venn_genlist4
+      list <- scan(path$datapath, what = "character")
+      updateTextAreaInput(session, "genlist4", value = list)
+    }
   })
   
   #Execute graphs
-  observeEvent(input$heat, {
-    ## Matrix counts heatmap
-    output$distPlot <- renderPlot({
+    dataInput <- reactive({
       if(is.null(input$heatmap_matrix)){
         return (NULL)
       }else{
         path <- input$heatmap_matrix
-        thread <- read.delim(file = path$datapath, sep = "\t", header = TRUE)
-        rownames(thread) <- thread$Gene
-        thread <- thread[-1]
-        thread <- data.matrix(thread, rownames.force = NA)
-        if(is.null(thread)){
-          return(NULL)
-        }else{
-          if(input$hide_label_matrix){
-            label <- ""
-          }else{
-            label <- NULL
-          }
-          heatmap.2(main = input$titlematrix,
-                    density.info = "density",
-                    thread,
-                    col=bluered(75),
-                    trace = "none",
-                    scale = input$scalefull,
-                    labRow = label
-          )
-        }
-      }
-    }) #Closing matrix counts heatmap
-    
-    #Table of selected genes
-    output$tabledgenes <- renderDataTable({
-      if(is.null(input$heatmap_matrix)){
-        return (NULL)
-      }else{
-        path <- input$heatmap_matrix
-        if(is.null(input$heat_genlist)){
-          return (NULL)
-        }else{
-          path2 <- input$heat_genlist
-          genlist <- as.vector(input$tocheck)
-          fullgens <- read.delim(file = path$datapath, sep = "\t", header = TRUE)
-          genlist <- read.delim(file = path2$datapath, sep = "\t", header = TRUE)
-          selection <- as.vector(t(genlist))
-          final <- rbind(subset(fullgens, Gene == selection[1]))
-          for (row in 2:length(selection)) {
-            final <- rbind(final, subset(fullgens, Gene == selection[row]))
-          }
-          final
-        }
-      }
-    })#closing selected genes table
-    ## Heatmap with selected genes
-    output$newOne <- renderPlot({
-      if(is.null(input$heatmap_matrix) | is.null(input$heat_genlist)){
-        return (NULL)
-      }else{
-        path <- input$heatmap_matrix
-        path2 <- input$heat_genlist
-        fullgens <- read.delim(file = path$datapath, sep = "\t", header = TRUE)
-        genlist <- read.delim(file = path2$datapath, sep = "\t", header = TRUE)
-        selection <- as.vector(t(genlist))
-        thread2 <- rbind(subset(fullgens, Gene == selection[1]))
-        for (row in 2:length(selection)) {
-          thread2 <- rbind(thread2, subset(fullgens, Gene == selection[row]))
-        }
-        rownames(thread2) <- thread2$Gene
-        thread2 <- thread2[-1]
-        thread2 <- data.matrix(thread2, rownames.force = NA)
-        if(is.matrix(thread2)){
-          if(input$hide_label_selected){
-            label <- ""
-          }else{
-            label <- NULL
-          }
-          heatmap.2(main = input$title_new_one,
-                    density.info = "density",
-                    thread2,
-                    col=bluered(75),
-                    trace = "none",
-                    labRow = label,
-                    scale = input$scale_selected_gens)
-        }
-      }
-    })#Closing genes heatmap
-    
-    output$download1 <- downloadHandler("Heatmaps", function(theFile) {
-      #open pdf
-      pdf(theFile)
-      
-      #plot 1
-      if(is.null(input$heatmap_matrix)){
-        return (NULL)
-      }else{
-        path <- input$heatmap_matrix
-        thread <- read.delim(file = path$datapath, sep = "\t", header = TRUE)
-        rownames(thread) <- thread$Gene
-        thread <- thread[-1]
-        thread <- data.matrix(thread, rownames.force = NA)
-        if(is.null(thread)){
-          return(NULL)
-        }else{
-          if(input$hide_label_matrix){
-            label <- ""
-          }else{
-            label <- NULL
-          }
-          heatmap.2(main = input$titlematrix,
-                    density.info = "density",
-                    thread,
-                    col=bluered(75),
-                    trace = "none",
-                    scale = input$scalefull,
-                    labRow = label
-          )
-        }
-      }
-      #plot 2
-      if(is.null(input$heatmap_matrix) | is.null(input$heat_genlist)){
-        return (NULL)
-      }else{
-        path <- input$heatmap_matrix
-        path2 <- input$heat_genlist
-        fullgens <- read.delim(file = path$datapath, sep = "\t", header = TRUE)
-        genlist <- read.delim(file = path2$datapath, sep = "\t", header = TRUE)
-        selection <- as.vector(t(genlist))
-        thread2 <- rbind(subset(fullgens, Gene == selection[1]))
-        for (row in 2:length(selection)) {
-          thread2 <- rbind(thread2, subset(fullgens, Gene == selection[row]))
-        }
-        rownames(thread2) <- thread2$Gene
-        thread2 <- thread2[-1]
-        thread2 <- data.matrix(thread2, rownames.force = NA)
-        if(is.matrix(thread2)){
-          if(input$hide_label_selected){
-            label <- ""
-          }else{
-            label <- NULL
-          }
-          heatmap.2(main = input$title_new_one,
-                    density.info = "density",
-                    thread2,
-                    col=bluered(75),
-                    trace = "none",
-                    labRow = label,
-                    scale = input$scale_selected_gens)
-        }
-      }
-      
-      #Close pdf
-      dev.off()
-
-      # file.copy(from = "heatmaps.pdf", to = theFile)
-    })  
-  })
-  #Closing event
-  
-  observeEvent(input$venn, {
-    output$vennDiagram <-renderPlot({
-      if(is.null(input$venn_matrix) | is.null(input$venn_genlist1) | is.null(input$venn_genlist2)){
-        return (NULL)
-      }else{
-        path_matrix <- input$venn_matrix
-        path_genlist1 <-input$venn_genlist1
-        path_genlist2 <- input$venn_genlist2
-        fullgens <- read.table(path_matrix$datapath, header = TRUE, sep = "\t", as.is = TRUE)
-        genlist1 <- read.table(path_genlist1$datapath, header = TRUE, sep = "\t", as.is = TRUE)
-        genlist2 <- read.table(path_genlist2$datapath, header = TRUE, sep = "\t", as.is = TRUE)
-        
-        selection1 <- as.vector(t(genlist1))
-        selection2 <- as.vector(t(genlist2))
-        
-        final1 <- rbind(subset(fullgens, Gene == selection1[1]))
-        for (row in 2:length(selection1)) {
-          final1 <- rbind(final1, subset(fullgens, Gene == selection1[row]))
-        }
-        
-        final2 <- rbind(subset(fullgens, Gene == selection2[1]))
-        for (row in 2:length(selection2)) {
-          final2 <- rbind(final2, subset(fullgens, Gene == selection2[row]))
-        }
-        
-        overlapp <- subset(final1, Gene %in% final2$Gene)
-        
-        grid.newpage()
-        draw.pairwise.venn(area1 = nrow(final1),
-                           area2 = nrow(final2),
-                           cross.area = nrow(overlapp),
-                           category = c("Selection 1", "Selection 2"),
-                           fill = c("lightblue", "pink"),
-                           scaled = TRUE)
+        df <- read.delim(file = path$datapath, sep = "\t", header = TRUE, as.is = TRUE)
+        rownames(df) <- df$input$id_column
+        df <- df[, sapply(df, class) == 'numeric']
+        df <- data.matrix(df, rownames.force = NA)
+        return (df)
       }
     })
     
-  })#Close event
+    
+    finalInput <- reactive({
+      if(is.null(input$heat_genlist)) return (dataInput()) # if are not genes informed, then make the first treatment
+      # otherwise ... 
+      column_name <- as.character(input$id_column) #id column is the radio button to select type of annotation input.
+      if(column_name == "ensembl_id"){
+        path <- input$heatmap_matrix
+        # path2 <- as.vector(input$genlist)
+        samples <- input$samples # Selected columns to show. 
+        fullgens <- read.delim(file = path$datapath, sep = "\t", header = TRUE, as.is = TRUE)
+        # genlist <- read.delim(file = path2$datapath, sep = "\t", header = TRUE, as.is = TRUE)
+        selection <- strsplit(input$genlist, ",")[[1]]
+        df <- rbind(subset(fullgens, ensembl_id == selection[1]))
+        for (row in 2:length(selection)) {
+          df <- rbind(df, subset(fullgens, ensembl_id == selection[row]))
+        }
+        rownames(df) <- df$ensembl_id
+        df <- df[, colnames(df) %in% samples]
+        df <- data.matrix(df, rownames.force = NA)
+      }else if(column_name == "gene_name"){
+        path <- input$heatmap_matrix
+        # path2 <- input$heat_genlist
+        samples <- input$samples
+        fullgens <- read.delim(file = path$datapath, sep = "\t", header = TRUE, as.is = TRUE)
+        # genlist <- read.delim(file = path2$datapath, sep = "\t", header = TRUE, as.is = TRUE)
+        selection <- strsplit(input$genlist, ",")[[1]]  # convert the character vector and extracting elements.
+        df <- rbind(subset(fullgens, gene_name == selection[1]))
+        for (row in 2:length(selection)) {
+          df <- rbind(df, subset(fullgens, gene_name == selection[row]))
+        }
+        rownames(df) <- df$gene_name
+        df <- df[, colnames(df) %in% samples] # Df with Selected columns to show. 
+        df <- data.matrix(df, rownames.force = NA) # Convert df to matrix, require to make a heatmap.
+        return (df)
+      }
+    })
+    
+    #Execute graphs
+    observeEvent(input$heat, {
+      output$distPlot <- renderPlot({
+        thread <- finalInput()
+        
+        if(is.null(thread)){
+          return(NULL)
+        }else{
+          #Control hide/show row label
+          if(input$hide_label_matrix){
+            label <- ""
+          }else{
+            label <- NULL
+          }
+          #end control hide/show row label
+          
+          #Control clustering
+          boolCol <- NULL
+          boolRow <- NULL
+          if(length(input$clustering) == 1){ 
+            if(input$clustering == "Colv")   boolCol <- TRUE
+              
+            if(input$clustering == "Rowv")   boolRow <- TRUE
+          }
+          if(length(input$clustering) == 2){
+            boolCol <- TRUE
+            boolRow <- TRUE
+          }
+          if(is.null(input$clustering)){
+            boolRow <- FALSE
+            boolCol <- NULL
+          }
+          #end Control clustering
+          
+          #Control show/hide dendogram
+          if(length(input$dendogram) == 1){
+            if(input$dendogram == "Rowv")   show_dendo <- "row"
+              
+            if(input$dendogram == "Colv")   show_dendo <- "column"
+          }
+          if(length(input$dendogram) == 2) show_dendo <- "both"
+          if(is.null(input$dendogram)) show_dendo <- "none"
+          #end Control show/hide dendogram
+          
+          
+          return (heatmap.2(main = input$titlematrix,
+                    density.info = "density",
+                    thread,
+                    keysize = 2,
+                    Rowv = boolRow,
+                    Colv = boolCol,
+                    dendrogram = show_dendo,
+                    col= input$heat_col,
+                    trace = "none",
+                    scale = input$scalefull,
+                    labRow = label,
+                    symm = FALSE))
+        }
+      })
+      
+      output$downloadHeat <- downloadHandler("Heatmaps", function(theFile) {
+        #open file
+        w <- input$width
+        h <- input$height
+        if(input$format == "pdf")   pdf(theFile, width = w, height = h)
+        if(input$format == "jpeg")  jpeg(theFile, width = w, height = h)
+        if(input$format == "png")  png(theFile, width = w, height = h)
+        if(input$format == "tiff")  tiff(theFile, width = w, height = h)
+        if(input$format == "bmp")  bmp(theFile, width = w, height = h)
+        
+        #plot
+        thread <- finalInput()
+        if(is.null(thread)){
+          return(NULL)
+        }else{
+          if(input$hide_label_matrix){
+            label <- ""
+          }else{
+            label <- NULL
+          }
+          #Control clustering
+          boolCol <- NULL
+          boolRow <- NULL
+          if(length(input$clustering) == 1){ 
+            if(input$clustering == "Colv")   boolCol <- TRUE
+            
+            if(input$clustering == "Rowv")   boolRow <- TRUE
+          }
+          if(length(input$clustering) == 2){
+            boolCol <- TRUE
+            boolRow <- TRUE
+          }
+          if(is.null(input$clustering)){
+            boolRow <- FALSE
+            boolCol <- NULL
+          }
+          #end Control clustering
+          
+          #Control show/hide dendogram
+          if(length(input$dendogram) == 1){
+            if(input$dendogram == "Rowv")   show_dendo <- "row"
+            
+            if(input$dendogram == "Colv")   show_dendo <- "column"
+          }
+          if(length(input$dendogram) == 2) show_dendo <- "both"
+          if(is.null(input$dendogram)) show_dendo <- "none"
+          #end Control show/hide dendogram
+          heatmap.2(main = input$titlematrix,
+                    density.info = "density",
+                    thread,
+                    keysize = 2,
+                    Rowv = boolRow,
+                    Colv = boolCol,
+                    dendrogram = show_dendo,
+                    col= input$heat_col,
+                    trace = "none",
+                    scale = input$scalefull,
+                    labRow = label,
+                    symm = FALSE
+          )
+        }
+        #Close pdf
+        dev.off()
+      })
+      #Control error message
+      output$error_content <- renderText({
+        if(!is.null(input$heat_genlist)){
+          df <- finalInput() #load DATA.FRAME
+          path <- input$heat_genlist #load Gene list
+          genlist <- strsplit(input$genlist, ",")[[1]]  
+          if(any(genlist %in% rownames(df))){
+            return (NULL)
+          }else{
+           return (createAlert(session, "error_message",
+                               content = "This annotation file doesn't match with given matrix",
+                               style = "warning"))
+          }
+        }else{
+          return (NULL)
+        }
+      })
+      #Closing event
+    })
+    
+    vennInputList <- reactive({
+      list <- list()
+      if(input$genlist1 != "" & input$genlist2 != "" & input$genlist3 != "" & input$genlist4 != ""){
+        list <- list( A = strsplit(input$genlist1, ",")[[1]],
+                      B = strsplit(input$genlist2, ",")[[1]],
+                      C = strsplit(input$genlist3, ",")[[1]],
+                      D = strsplit(input$genlist4, ",")[[1]])
+      }else if(input$genlist1 != "" & input$genlist2 != "" & input$genlist3 != ""){
+        list <- list( A = strsplit(input$genlist1, ",")[[1]],
+                      B = strsplit(input$genlist2, ",")[[1]],
+                      C = strsplit(input$genlist3, ",")[[1]])
+      }else if(input$genlist1 != "" & input$genlist2 != ""){
+        list <- list( A = strsplit(input$genlist1, ",")[[1]],
+                      B = strsplit(input$genlist2, ",")[[1]])
+      }else if(input$genlist1 != ""){
+        list <- list( A = strsplit(input$genlist1, ",")[[1]])
+      }
+      
+      return (list)
+    })
+    
+    observeEvent(input$venn, {
+      output$vennDiagram <-renderPlot({
+        listVenn <- vennInputList()
+        listNames <- c(input$title_genlist1, input$title_genlist2, input$title_genlist3, input$title_genlist4)
+        listCol <- c(input$col1, input$col2, input$col3, input$col4)
+        grid.newpage()
+        return (grid.draw(venn.diagram(x = listVenn,
+                              filename = NULL,
+                              category.names = listNames[1:length(listVenn)],
+                              fill = listCol[1:length(listVenn)],
+                              cex = 2,
+                              cat.cex = 2
+                              )))
+        
+      })
+      
+    })#Close event
   
+    output$downloadVenn <- downloadHandler("VennDiagram", function(theFile) {
+      jpeg(theFile);
+      listVenn <- vennInputList()
+      listNames <- c(input$title_genlist1, input$title_genlist2, input$title_genlist3, input$title_genlist4)
+      listCol <- c(input$col1, input$col2, input$col3, input$col4)
+      grid.newpage()
+      grid.draw(venn.diagram(x = listVenn,
+                                     filename = NULL,
+                                     category.names = listNames[1:length(listVenn)],
+                                     fill = listCol[1:length(listVenn)],
+                                     cex = 2,
+                                     cat.cex = 2
+                                ))
+      
+      dev.off();
+    })#close downloadfile
+  
+    ##DEBUGGING
+    
+    # output$hola <- renderText({
+    #   # paste(class(as.vector(input$genlist)),input$genlist)
+    #   selection <- input$genlist
+    #   paste(class(selection), selection)
+    # })
+    
 })#Close server
