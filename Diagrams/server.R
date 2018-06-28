@@ -14,8 +14,9 @@ library(shiny)
 library(shinyjs)
 library(gplots)
 library(VennDiagram)
-library(affycoretools)
-library(VennDetail)
+library(ggplot2)
+library(plotly)
+library(heatmaply)
 # Define server logic
 shinyServer(function(input, output, session) {
   
@@ -220,19 +221,11 @@ shinyServer(function(input, output, session) {
   #Observer for contrast button in Heatmap Panel
   observeEvent(input$heat, {
     #Draw heatmap in ui
-    output$distPlot <- renderPlot({
+    output$distPlot <- renderPlotly({
       
       thread <- finalInput() #Get matrix from "Treatment of heatmap panel textArea"
       
       if(!is.null(thread)){
-        #Control hide/show row label
-        if(input$hide_label_matrix){
-          label <- ""
-        }else{
-          label <- NULL
-        }
-        #end control hide/show row label
-  
         #Control clustering
         boolCol <- NULL
         boolRow <- NULL
@@ -250,11 +243,6 @@ shinyServer(function(input, output, session) {
           boolCol <- NULL
         }
         #end Control clustering
-        
-        #Type of density info
-        if(as.character(input$density) == "histogram") density <- "histogram"
-        if(as.character(input$density) == "density") density <- "density"
-        if(as.character(input$density) == "none") density <- "none"
         #Control show/hide dendogram
         if(length(input$dendogram) == 1){
           if(input$dendogram == "Rowv")   show_dendo <- "row"
@@ -265,87 +253,24 @@ shinyServer(function(input, output, session) {
         if(is.null(input$dendogram)) show_dendo <- "none"
         #end Control show/hide dendogram
         #Execute graphs
-        return (heatmap.2(main = input$titlematrix,
-                          density.info = density,
-                          thread,
+        return (heatmaply(thread,
+                          main = input$titlematrix,
                           keysize = 2,
                           Rowv = boolRow,
                           Colv = boolCol,
                           dendrogram = show_dendo,
-                          col= input$heat_col,
+                          colors = eval(parse(text=input$heat_col)),
                           trace = "none",
                           scale = input$scalefull,
-                          labRow = label,
-                          symm = FALSE))
+                          row_dend_left = F,
+                          height = "1200",
+                          labRow = rownames(thread),
+                          labCol = colnames(thread),
+                          symm = FALSE,
+                          margins = c(50,50,50,100)
+                          ) %>% layout(height=input$height,width=input$width) )
         }
     })
-    
-    #Create a file with heatmap plot
-    output$downloadHeat <- downloadHandler("Heatmaps", function(theFile) {
-     
-       #set width and height of file to create
-       w <- input$width
-       h <- input$height
-       #Select type of document to create
-       if(input$format == "pdf")   pdf(theFile, width = w, height = h)
-       if(input$format == "jpeg")  jpeg(theFile, width = w, height = h)
-       if(input$format == "png")  png(theFile, width = w, height = h)
-       if(input$format == "tiff")  tiff(theFile, width = w, height = h)
-       if(input$format == "bmp")  bmp(theFile, width = w, height = h)
-       
-       thread <- finalInput() #Get matrix from "Treatment of heatmap panel textArea"
-       if(!is.null(thread)){
-         if(input$hide_label_matrix){
-           label <- ""
-         }else{
-           label <- NULL
-         }
-         #Control clustering
-         boolCol <- NULL
-         boolRow <- NULL
-         if(length(input$clustering) == 1){ 
-           if(input$clustering == "Colv")   boolCol <- TRUE
-           
-           if(input$clustering == "Rowv")   boolRow <- TRUE
-         }
-         if(length(input$clustering) == 2){
-           boolCol <- TRUE
-           boolRow <- TRUE
-         }
-         if(is.null(input$clustering)){
-           boolRow <- FALSE
-           boolCol <- NULL
-         }
-         #end Control clustering
-        
-         #Control show/hide dendogram
-         if(length(input$dendogram) == 1){
-           if(input$dendogram == "Rowv")   show_dendo <- "row"
-           
-           if(input$dendogram == "Colv")   show_dendo <- "column"
-         }
-         if(length(input$dendogram) == 2) show_dendo <- "both"
-         if(is.null(input$dendogram)) show_dendo <- "none"
-         #end Control show/hide dendogram
-         
-         #plot
-         heatmap.2( main = input$titlematrix,
-                    density.info = "density",
-                    thread,
-                    keysize = 2,
-                    Rowv = boolRow,
-                    Colv = boolCol,
-                    dendrogram = show_dendo,
-                    col= input$heat_col,
-                    trace = "none",
-                    scale = input$scalefull,
-                    labRow = label,
-                    symm = FALSE
-                  )
-      }
-      #Close pdf
-      dev.off()
-   })
    #Control error message for heatmap Panel
    output$error_content <- renderText({
      if(!is.null(input$heat_genlist)){
@@ -365,6 +290,9 @@ shinyServer(function(input, output, session) {
    #Closing event
   })
   
+  output$hola <- renderText({
+    return (paste(class(input$heat_col),input$heat_col))
+  })
   #Treatment of input textArea
   vennInputList <- reactive({
     list <- list()

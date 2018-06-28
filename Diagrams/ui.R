@@ -19,6 +19,9 @@ library(shinyBS)
 library(shinydashboard)
 library(shinythemes)
 library(colourpicker)
+library(ggplot2)
+library(plotly)
+library(heatmaply)
 # Define UI for application
 shinyUI(
   navbarPage( theme = shinytheme("lumen"), windowTitle = "Biocore",
@@ -45,43 +48,41 @@ shinyUI(
                box(  h1("Configure your plot", style = "color: #707B7C;"),
                  fileInput("heatmap_matrix", "Upload your matrix count", accept = ".txt"),
                  fileInput("heat_genlist", "Upload a list of genes", accept = ".txt"),
-                 textAreaInput("genlist", "Paste genes", width = 150, height = 200),
-                 textInput("titlematrix", "Title of heatmap"),
+                 textAreaInput("genlist", "Paste genes", width = 150, height = 100),
+                 textInput("titlematrix", "Title of heatmap", value = "heatmap"),
                  checkboxGroupInput("clustering", "Clustering", choices = c("Rowv", "Colv"),
                                     inline = TRUE),
                  checkboxGroupInput("dendogram", "show/hide dendograms", choices = c("Rowv", "Colv"),
                                     inline = TRUE),
+                 selectInput("scalefull", "Scale", choices = c("none", "row", "column"), selected = "none"),
                  checkboxGroupInput("samples", "show/hide samples", choices= c("a","b","c"),
                               inline = TRUE),
                  radioButtons("id_column", "Select the ID column", choices = list("A","B","C"), selected = NULL,
                               inline = TRUE),
-                 radioButtons("density", "Density info", choices = list("histogram","density","none"),
-                              inline = TRUE),
-                 selectInput("scalefull", "Scale", choices = c("none", "row", "column"), selected = "none"),
-                 checkboxInput("hide_label_matrix", "Hide row label", value = FALSE),
-                 selectInput("heat_col", "Select colour: ", choices = c("heat.colors",
+                 selectInput("heat_col", "Select colour: ", choices = c("viridis",
+                                                                        "heat.colors",
                                                                         "terrain.colors",
+                                                                        "BrBG",
+                                                                        "cool_warm",
                                                                         "topo.colors",
                                                                         "cm.colors",
                                                                         "bluered",
                                                                         "redblue")),
-                 actionButton('heat', 'Contrast', icon("bar-chart-o")),hr(),
-                 selectInput("format", "Select format", choices = c("pdf", "jpeg", "png", "tiff", "bmp")),
-                 numericInput("width", "choose width: ", value = 0),
-                 numericInput("height", "choose height: ", value = 0),
-                 downloadButton("downloadHeat", "Generate plot"),
+                 numericInput("width", "choose width: ", value = 1270),
+                 numericInput("height", "choose height: ", value = 900),
+                 actionButton('heat', 'Contrast', icon("bar-chart-o")),
                  width = 12, style = "border-right: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB; border-bottom: 4px solid #D5DBDB;
                                       border-top-right-radius: 1em; border-bottom-right-radius: 1em;
                                       padding : 0.5em; margin-bottom: 1em; margin-top: 70px;"
                ),
                br(),
                ##Container of buttons
-               box( textOutput("hola")),
+               box( verbatimTextOutput("hola")),
                width = 3, style = "border-radius: 1em;"
                ),
              box( style = "border: 4px solid #D5DBDB;
                           height: 88vh; border-radius: 1em; margin-top: 70px;",
-               box( plotOutput("distPlot", height = "82vh"), width = 11),
+               box( plotlyOutput("distPlot"), width = 11),
              width = 9)
              ),
     ##VennDiagram view
