@@ -1,16 +1,17 @@
 # Define UI for application
-shinyUI(
+shinyUI( ui <- function(request){
   navbarPage( 
     theme = shinytheme("lumen"), windowTitle = "Biocore tools",
-    img( src = 'logo.png', height = "40" ),
+    img( src = 'logo.png', height = "40" ), 
     position = "static-top", inverse = TRUE, useShinyjs(),
     tags$head(tags$style(type="text/css", "
                                     .busy {
-                                       position: fixed;
-                                       top: 6%;
-                                       left: 0px;
-                                       width: 100%;
-                                       padding-top: 5px;
+                                       # position: fixed;
+                                       # bottom: 0%;
+                                        right: 0px;
+                                       # width: 20%;
+                                       # padding-top: 20px;
+                                       # padding-bottom: 20px;
                                        text-align: center;
                                        font-weight: bold;
                                        font-size: 100%;
@@ -25,27 +26,24 @@ shinyUI(
                                       color: #707B7C;
                                       text-align: center;
                                     }
-                                     ")),
-    ##Home view
-    # tabPanel( title = "Home", icon = icon("home"),
-    #   box(width = 2),
-    #   box(width = 8, style = "border-bottom: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB;
-    #                       border-radius: 1em; height: 88vh; margin-top: 50px;",
-    #                 box(width = 2,
-    #                   img( src = 'biocore-logo.png', height = "70")
-    #                   )
-    #                 ),
-    #   box(width = 2)
-    # ), ##Heatmap view
+                                     ")
+    ),
+    header = 
+      box(width = 12,
+          box(width = 11,
+            div(class = "busy",
+                p("Please wait, the server is busy..."),
+                textOutput("time")
+            )
+          ),box(width = 1,
+            bookmarkButton("Save session")
+          )
+    ),
+    ##Heatmap view
     tabPanel(title = "Heatmap", icon = icon("fas fa-braille", class = "fa-2x"),
              value = useShinyjs(),
              ## Message busy
-             box(width = 12,
-                 div(class = "busy",
-                   p("Please wait, the server is busy..."),
-                   textOutput("time")
-               )
-             ),
+             
              ## container box
              box( width = 3, style = "border-radius: 1em; color: #5DADE2;",
                   #Control error
@@ -61,9 +59,10 @@ shinyUI(
                    radioButtons("id_column", "Select the ID column", choices = list("A","B","C"), inline = TRUE),
                    fileInput("heat_genlist", "Upload a list of genes", accept = ".txt"),
                    textAreaInput("genlist", "Paste genes"),
+                   actionBttn("clear", "Clear selection", icon("fas fa-eraser"),style = "jelly", size = "sm"),
                    dropdownButton(
                      circle = TRUE, status = "secundary", icon = icon("gear"), width = "300px",
-                     tooltip = tooltipOptions(title = "Click to see options !"),
+                     tooltip = tooltipOptions(title = "Click to see options !"), size = "sm",
                      h1("Configure your plot"),
                      textInput("titlematrix", "Title of heatmap", value = "Heatmap"),
                      checkboxGroupInput("clustering", "Clustering", choices = c("Rowv", "Colv"),
@@ -73,6 +72,8 @@ shinyUI(
                      selectInput("scalefull", "Scale", choices = c("none", "row", "column"), selected = "none"),
                      checkboxGroupInput("samples", "Show/hide samples", choices= c("A","B","C"),
                                   inline = TRUE),
+                     sliderInput("fontsizerow_hm", "Row fontsize: ", min = 8, max = 20, value = 12),
+                     sliderInput("fontsizecol_hm", "Col fontsize: ", min = 8, max = 20, value = 12),
                      materialSwitch("rowlabel", "Hide row label", status = "primary"),
                      box(width = 12,
                          h1("Colour options", style = "text-align: left;"),
@@ -93,9 +94,6 @@ shinyUI(
                                  sliderInput("maxInput", label =  "Range above", min = 0, max = 1, value = 0, dragRange = FALSE) 
                              )
                          )
-                         #, box(width = 12,
-                         #     sliderInput("id2", label = "Mid Point", min = 0, max = 100, value = 0)
-                         # )
                      )
                    ) 
                )
@@ -108,11 +106,10 @@ shinyUI(
                           p("1 - The uploaded file should not be of the full genes."),
                           p("2 - Please try to upload file with a maximum of 10000 genes or display button will be disable."),
                           p("3 - You can add a filter file with selected genes or paste directly in the text area."),
-                          p("4 - selection of genes must match with id column, so you should choose type of selection."),
+                          p("4 - Selection of genes must match with id column, so you should choose type of selection."),
                           p("5 - Input in text area should be separated 1 per line."),
                           p("6 - Clustering and dendogram option buttons will be disable with files above 5000 genes.")
                       )
-                      # ,box( verbatimTextOutput("hola"))
                   ),
                   box(width = 6,
                     box(width = 6,
@@ -124,7 +121,7 @@ shinyUI(
                         box(width = 6,
                             numericInput("height", "Choose plot height: ", value = 750)
                         ),
-                        actionBttn('heat', 'Display', icon("bar-chart-o"), color = "primary", style = "jelly")
+                        actionBttn('heat', 'Display', icon("bar-chart-o"), style = "jelly", size = "sm")
                     ),
                     box(width = 6,
                         conditionalPanel(
@@ -133,7 +130,7 @@ shinyUI(
                           hr(),
                           box(width = 12,
                             radioButtons("download_type_heat", "Select type of file:", choices = c("pdf", "png", "jpeg"), inline = TRUE),
-                            downloadButton("downloadHeat", "Save Heatmap", icon = icon("fas fa-download"))
+                            downloadBttn("downloadHeat", "Save Heatmap", size = "sm", style = "jelly")
                           )
                         )
                       )
@@ -154,7 +151,7 @@ shinyUI(
                              fileInput("venn_genlist1", "Upload a list of genes", accept = ".txt"),
                              textAreaInput("genlist1", "Paste genes"),
                              colourInput("col1", "Select colour", "lightblue", allowTransparent = TRUE),
-                             actionButton('add2', 'Add', icon("fas fa-plus"))
+                             actionBttn('add2', 'Add', icon("fas fa-plus"), style = "material-circle", size = "sm")
                           ),
                         conditionalPanel(
                           condition = "input.add2 > 0",
@@ -164,7 +161,7 @@ shinyUI(
                             fileInput("venn_genlist2", "Upload a list of genes", accept = ".txt"),
                             textAreaInput("genlist2", "Paste genes"),
                             colourInput("col2", "Select colour", "pink", allowTransparent = TRUE),
-                            actionButton('add3', 'Add', icon("fas fa-plus"))
+                            actionBttn('add3', 'Add', icon("fas fa-plus"), style = "material-circle", size = "sm")
                           )
                         ),
                         conditionalPanel(
@@ -175,7 +172,7 @@ shinyUI(
                             fileInput("venn_genlist3", "Upload a list of genes", accept = ".txt"),
                             textAreaInput("genlist3", "Paste genes"),
                             colourInput("col3", "Select colour", "green", allowTransparent = TRUE),
-                            actionButton('add4', 'Add', icon("fas fa-plus"))
+                            actionBttn('add4', 'Add', icon("fas fa-plus"), style = "material-circle", size = "sm")
                           )
                         ),
                         conditionalPanel(
@@ -213,7 +210,7 @@ shinyUI(
                       selectInput("download_type_venn", "Select type of file:", choices = c("tiff","pdf", "png", "jpeg"))
                     ),
                     box(width = 3,
-                      downloadButton("downloadVenn", "SAVE VENN", icon("fas fa-download"))
+                      downloadBttn("downloadVenn", "Save venn", size = "sm", style = "jelly")
                     ),
                     box(width = 7, plotOutput("vennDiagram")),
                     box(width = 5,
@@ -225,7 +222,7 @@ shinyUI(
                    conditionalPanel(
                      condition = "(input.genlist1 != '' | input.genlist2 != '' | input.genlist3 != '' | input.genlist4 != '')",
                      box(width = 6,
-                       actionBttn('venn', 'Display', icon("bar-chart-o"), color = "primary", style = "pill")
+                       actionBttn('venn', 'Display', icon("bar-chart-o"), style = "jelly")
                     )
                    ),
                    box(width = 3,
@@ -233,8 +230,8 @@ shinyUI(
                    ),
                    box(width = 2,
                        conditionalPanel(
-                         condition = "input.venn == true",
-                         downloadButton("download_list", "Save list", icon("fas fa-download"))
+                         condition = "input.venn > 0",
+                         downloadBttn("download_list", "Save list", size = "sm", style = "jelly")
                        )
                    ),
                    box(width = 12,
@@ -248,25 +245,29 @@ shinyUI(
       box(width = 3, style = "border-radius: 1em; color: #5DADE2;",
           dfFileInput("df_scatter", "Upload gene expresion data frame"),
           selectInput("y_expression_scatter", "Select sample for Y axis:", choices = c("a","b","c")),
+          sliderInput("ylim_scatter", "Y limits:", min = 0, max = 1, value = c(0,1), step = 1),
           selectInput("x_expression_scatter", "Select sample for X axis:", choices = c("a","b","c")),
+          sliderInput("xlim_scatter", "X limits:", min = 0, max = 1, value = c(0,1), step = 1),
           dropdownButton(
             circle = TRUE, status = "secundary", icon = icon("gear"), width = "300px",
-            tooltip = tooltipOptions(title = "Click to see options !"), 
+            tooltip = tooltipOptions(title = "Click to see options !"), size = "sm",
             textInput("scatter_title", "Name this plot", "Graph"),
-            textInput("scatter_ylab", "Name of Y", "Sample Y"),
-            textInput("scatter_xlab", "Name of X:", "Sample X"),
-            colourInput("color", "Select points colour", "#48AB6F", allowTransparent = TRUE),
-            selectInput("type", "Point type: ", choices = c("1", "2", "3", "4", "5", "9", "10", "13", "22")),
-            sliderInput("size", "Point size: ", 0, 10, value = 2),
-            selectInput("colorby", "Colour by: ", choices = c("a","b","c")),
-            selectInput("typeby", "Type by: ", choices = c("a","b","c"))
+            sliderInput("scatter_title_size", "Title size: ", 8, 20, value = 12),
+            textInput("scatter_ylab", "Name of Y axis", "Sample Y"),
+            sliderInput("scatter_ylab_size", "Y label size: ", 8, 20, value = 12),
+            textInput("scatter_xlab", "Name of X axis:", "Sample X"),
+            sliderInput("scatter_xlab_size", "X label size: ", 8, 20, value = 12),
+            colourInput("color_scatter", "Select points colour", "#48AB6F", allowTransparent = TRUE),
+            selectInput("type_scatter", "Point type: ", choices = c("1", "2", "3", "4", "5", "9", "10", "13", "22")),
+            sliderInput("size_scatter", "Point size: ", 1, 10, value = 2),
+            selectInput("colorby_scatter", "Colour by: ", choices = c("a","b","c")),
+            selectInput("typeby_scatter", "Type by: ", choices = c("a","b","c"))
           )
-          
       ),
       box(width = 9,
           conditionalPanel(
             condition = "input.doScatter == false",
-            box( actionBttn("doScatter", "Display", icon("bar-chart-o"), color = "primary", style = "bordered"))
+            box( actionBttn("doScatter", "Display", icon("bar-chart-o"), style = "jelly", size = "sm"))
           ),
           box (width = 12, plotlyOutput("scatter",height = "80vh"))
       )
@@ -287,4 +288,4 @@ shinyUI(
             },3000) "
     ))
   )
-)
+})

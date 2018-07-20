@@ -1,6 +1,6 @@
-list.of.packages <- c("ggplot2", "shinyjs", "shinyBS", "shinyWidgets", "shinycssloaders", "shinydashboard", "shinythemes", "colourpicker", "plotly", "heatmaply", "gplots", "VennDiagram")
+list.of.packages <- c("ggplot2", "shinyjs", "shinyBS", "shinyWidgets", "tidyverse", "cowplot", "shinycssloaders", "shinydashboard", "shinythemes", "colourpicker", "plotly", "heatmaply", "gplots", "VennDiagram")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
+if(length(new.packages)) install.packages(new.packages, repos = "http://cran.us.r-project.org")
 
 library(shiny)
 library(shinyjs)
@@ -15,5 +15,7 @@ library(plotly)
 library(heatmaply)
 library(gplots)
 library(VennDiagram)
-
+library(cowplot)
 source("Modules/scatter.R")
+
+enableBookmarking(store = "server")

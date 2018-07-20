@@ -78,6 +78,7 @@ shinyServer(function(input, output, session) {
       return (df)
     }
   })
+  selection <- reactiveValues()
   
   #"Treatment of [HEATMAP] panel textArea"
   finalInput <- reactive({
@@ -88,10 +89,10 @@ shinyServer(function(input, output, session) {
       samples <- input$samples # Selected columns to show. 
       fullgens <- read.delim(file = path$datapath, sep = "\t", header = TRUE, as.is = TRUE)
       # genlist <- read.delim(file = path2$datapath, sep = "\t", header = TRUE, as.is = TRUE)
-      selection <- strsplit(input$genlist, "\n")[[1]]
-      df <- rbind(subset(fullgens, fullgens[,input$id_column] %in% selection[1]))
-      for (row in 2:length(selection)) {
-        df <- rbind(df, subset(fullgens, fullgens[,input$id_column] %in% selection[row]))
+      selection$heatmap <- strsplit(input$genlist, "\n")[[1]]
+      df <- rbind(subset(fullgens, fullgens[,input$id_column] %in% selection$heatmap[1]))
+      for (row in 2:length(selection$heatmap)) {
+        df <- rbind(df, subset(fullgens, fullgens[,input$id_column] %in% selection$heatmap[row]))
       }
       rownames(df) <- df[,input$id_column]
       df <- df[, colnames(df) %in% samples]
@@ -122,9 +123,10 @@ shinyServer(function(input, output, session) {
   
   output$time <- renderText({
     df <- finalInput()
+    message = ""
     if(!is.null(df)){
       if(nrow(df) > 2000){
-        message <- paste("This action can take until 5 minutes, be patient.")
+        message <- "This action can take until 5 minutes, be patient."
       }
     }
     print (message)
@@ -226,79 +228,91 @@ shinyServer(function(input, output, session) {
   uiState$readyFlag <- 0
   uiState$readyCheck <- 0
   
-  #Observer for contrast button in Heatmap Panel
-  observeEvent(input$heat, {
-    #Draw heatmap in ui
-    output$distPlot <- renderPlotly({
-      uiState$readyFlag
-      
-      isolate({
-        if (uiState$readyFlag == uiState$readyCheck) {
-          uiState$readyFlag <- uiState$readyFlag+1
-          return(NULL)
-        }
-      })
-      
-      thread <- finalInput() #Get matrix from "Treatment of heatmap panel textArea"
+  observeEvent(input$clear, {
+    selection$heatmap <- 0
+    updateTextAreaInput(session, "genlist", value = "")
+    reset("heat_genlist")
+  })
+  
+  drawHM <- reactive({
+    uiState$readyFlag
+    
+    isolate({
+      if (uiState$readyFlag == uiState$readyCheck) {
+        uiState$readyFlag <- uiState$readyFlag+1
+        return(NULL)
+      }
+    })
+    
+    thread <- finalInput() #Get matrix from "Treatment of heatmap panel textArea"
+    if(!is.null(thread)){
       #CONTROL HIDE / SHOW ROW LABEL
       if(input$rowlabel){
         label <- NULL
       }else{
         label <- rownames(thread)
       }
-      if(!is.null(thread)){
-        #Control clustering
+      #Control clustering
+      boolCol <- NULL
+      boolRow <- NULL
+      if(length(input$clustering) == 1){ 
+        if(input$clustering == "Colv")   boolCol <- TRUE
+        
+        if(input$clustering == "Rowv")   boolRow <- TRUE
+      }
+      if(length(input$clustering) == 2){
+        boolCol <- TRUE
+        boolRow <- TRUE
+      }
+      if(is.null(input$clustering)){
+        boolRow <- FALSE
         boolCol <- NULL
-        boolRow <- NULL
-        if(length(input$clustering) == 1){ 
-          if(input$clustering == "Colv")   boolCol <- TRUE
-            
-          if(input$clustering == "Rowv")   boolRow <- TRUE
-        }
-        if(length(input$clustering) == 2){
-          boolCol <- TRUE
-          boolRow <- TRUE
-        }
-        if(is.null(input$clustering)){
-          boolRow <- FALSE
-          boolCol <- NULL
-        }
-        #end Control clustering
-        #Control show/hide dendogram
-        if(length(input$dendogram) == 1){
-          if(input$dendogram == "Rowv")   show_dendo <- "row"
-            
-          if(input$dendogram == "Colv")   show_dendo <- "column"
-        }
-        if(length(input$dendogram) == 2) show_dendo <- "both"
-        if(is.null(input$dendogram)) show_dendo <- "none"
+      }
+      #end Control clustering
+      #Control show/hide dendogram
+      if(length(input$dendogram) == 1){
+        if(input$dendogram == "Rowv")   show_dendo <- "row"
         
-        color.palette  <- colorRampPalette(c(input$heat_col1, input$heat_col2, input$heat_col3))(256)
+        if(input$dendogram == "Colv")   show_dendo <- "column"
+      }
+      if(length(input$dendogram) == 2) show_dendo <- "both"
+      if(is.null(input$dendogram)) show_dendo <- "none"
+      
+      color.palette  <- colorRampPalette(c(input$heat_col1, input$heat_col2, input$heat_col3))(256)
+      
+      #end Control show/hide dendogram
+      #Execute graphs
+      plot <- heatmaply(thread,
+                        main = input$titlematrix,
+                        Rowv = boolRow,
+                        Colv = boolCol,
+                        dendrogram = show_dendo,
+                        limits = c(input$minInput,input$maxInput),
+                        col = color.palette,
+                        trace = "none",
+                        fontsize_row = input$fontsizerow_hm,
+                        fontsize_col = input$fontsizecol_hm,
+                        scale = input$scalefull,
+                        row_dend_left = F,
+                        labRow = label,
+                        labCol = colnames(thread),
+                        symm = FALSE,
+                        plot_method = "plotly",
+                        margins = c(160,250,50,0) 
+      ) %>% layout( width = input$width, height = input$height)
         
-        #end Control show/hide dendogram
-        #Execute graphs
-        plot <- heatmaply(thread,
-                          main = input$titlematrix,
-                          keysize = 2,
-                          Rowv = boolRow,
-                          Colv = boolCol,
-                          dendrogram = show_dendo,
-                          limits = c(input$minInput,input$maxInput),
-                          col = color.palette,
-                          trace = "none",
-                          scale = input$scalefull,
-                          row_dend_left = F,
-                          labRow = label,
-                          labCol = colnames(thread),
-                          symm = FALSE,
-                          plot_method = "plotly",
-                          margins = c(50,160,50,100)
-                          ) %>% layout( width = input$width, height = input$height)
-                 
-        plot$elementId <- NULL
-        uiState$readyCheck <- uiState$readyFlag
-        return (plot)
-        }
+      plot$elementId <- NULL
+      uiState$readyCheck <- uiState$readyFlag
+      return (plot)
+      
+    }
+  })
+  
+  #Observer for contrast button in Heatmap Panel
+  observeEvent(input$heat, {
+    #Draw heatmap in ui
+    output$distPlot <- renderPlotly({
+      drawHM()
     })
     
    #Control error message for heatmap Panel
@@ -333,6 +347,7 @@ shinyServer(function(input, output, session) {
         label <- rownames(thread)
       }
       if(!is.null(thread)){
+        
         #Control clustering
         boolCol <- NULL
         boolRow <- NULL
@@ -358,31 +373,31 @@ shinyServer(function(input, output, session) {
         }
         if(length(input$dendogram) == 2) show_dendo <- "both"
         if(is.null(input$dendogram)) show_dendo <- "none"
+        #end Control show/hide dendogram
         
-        quantile.range <- quantile(thread, probs = seq(0, 1, 0.01))
-        palette.breaks <- seq(quantile.range[input$id], quantile.range[input$id2], 0.01)
-        color.palette  <- colorRampPalette(c(input$heat_col1, input$heat_col2, input$heat_col3))
+        color.palette  <- colorRampPalette(c(input$heat_col1, input$heat_col2, input$heat_col3))(256)
+        
         #end Control show/hide dendogram
         #Execute graphs
-        heatmaply(thread,
-                  main = input$titlematrix,
-                  keysize = 2,
-                  Rowv = boolRow,
-                  Colv = boolCol,
-                  dendrogram = show_dendo,
-                  breaks = palette.breaks,
-                  colors = color.palette,
-                  trace = "none",
-                  scale = input$scalefull,
-                  row_dend_left = F,
-                  height = "1200",
-                  labRow = label,
-                  labCol = colnames(thread),
-                  symm = FALSE,
-                  plot_method = "ggplot",
-                  margins = c(50,160,50,100),
-                  file = file
-          ) %>% layout(width = input$width, height = input$height)
+        #read about the function and parameters https://cran.r-project.org/web/packages/heatmaply/heatmaply.pdf
+        plot <- heatmaply(thread,
+                          main = input$titlematrix,
+                          keysize = 2,
+                          Rowv = boolRow,
+                          Colv = boolCol,
+                          dendrogram = show_dendo,
+                          limits = c(input$minInput,input$maxInput),
+                          col = color.palette,
+                          trace = "none",
+                          scale = input$scalefull,
+                          row_dend_left = F,
+                          labRow = label,
+                          labCol = colnames(thread),
+                          symm = FALSE,
+                          plot_method = "plotly",
+                          margins = c(50,160,50,100)
+        ) %>% layout( width = input$width, height = input$height)
+        
       }
   })
   output$hola <- renderText({
@@ -421,6 +436,7 @@ shinyServer(function(input, output, session) {
       #Set vector of colors of lists
       listCol <- c(input$col1, input$col2, input$col3, input$col4)
       grid.newpage()
+      #read more about the function https://cran.r-project.org/web/packages/VennDiagram/VennDiagram.pdf
       return (grid.draw(venn.diagram(x = listVenn,
                                      filename = NULL,
                                      category.names = listNames[1:length(listVenn)],
@@ -588,11 +604,11 @@ shinyServer(function(input, output, session) {
     }
     if(!is.null(data)){
       x <- cbind(" ", as.vector(colnames(data)))
-      updateSelectInput(session, "colorby", choices = x, selected = NULL)
+      updateSelectInput(session, "colorby_scatter", choices = x, selected = NULL)
     }
     if(!is.null(data)){
       x <- cbind(" ", as.vector(colnames(data)[sapply(data, class) == "character"]))
-      updateSelectInput(session, "typeby", choices = x, selected = NULL)
+      updateSelectInput(session, "typeby_scatter", choices = x, selected = NULL)
     }
     if(!is.null(data)){
       if(nrow(data) > 5000){
@@ -603,63 +619,115 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  observe({
+    data <- df()
+    if(!is.null(data)){
+      data <- as.matrix(data[,colnames(data)[sapply(data,class) == "numeric"]])
+      x <- input$x_expression_scatter
+      y <- input$y_expression_scatter
+      updateSliderInput(session, "ylim_scatter", min = -10, max = 20, value = c(min(data),max(data)) )
+      updateSliderInput(session, "xlim_scatter", min = -10, max = 20, value = c(min(data),max(data)) )
+    }
+  })
+  
   #Get parameters to create scatter plot
   #Return a scatter plot
-  drawplot <- reactive({
+  drawScatter <- reactive({
     data <- df()
     rownames(data) <- data$ensembl_id
     x <- input$x_expression_scatter
     y <- input$y_expression_scatter
+    anno <- as.vector(colnames(data)[sapply(data, class) == "character"]) # Extract column names in data frame that data is character
+    custom_columns <- "" 
+    for ( i in 1:length(anno)){ 
+      # Concatenate in costum_columns each column with respective data in format 'data: value'
+      custom_columns <- paste(custom_columns, paste( paste(anno[i], ":", sep = ""), data[, anno[i]]), sep = "\n")
+    }
+    #Concatenate custom_columns value to te rest of data to show in legend.
+    legend <- paste(custom_columns, "<br>Sample y: ", data[, y], "<br>Sample x: ", data[, x] )
     if(!is.null(data)){
-      if( input$typeby != " " & input$colorby != " "){
+      if( input$typeby_scatter != " " & input$colorby_scatter != " "){
+        #read more about the function https://cran.r-project.org/web/packages/ggplot2/ggplot2.pdf
         p <- ggplot( data, aes_string(x = x,
                                       y = y,
-                                      color = input$colorby,
-                                      shape = input$typeby) ) +
-          geom_point( size = input$size) +
-          ggtitle(input$scatter_title)+
-          xlab(input$scatter_xlab) +
-          ylab(input$scatter_ylab)
-      }else if(input$colorby != " "){
+                                      color = input$colorby_scatter,
+                                      shape = input$typeby_scatter) ) +
+          geom_point( aes(text = legend),
+                      size = input$size_scatter) 
+      }else if(input$colorby_scatter != " "){
         p <-ggplot( data, aes_string(x = x,
                                      y = y,
-                                     color = input$colorby) ) +
-          geom_point( shape = input$type,
-                      size = input$size) +
-          ggtitle(input$scatter_title)+
-          xlab(input$scatter_xlab) +
-          ylab(input$scatter_ylab)
-      }else if(input$typeby != " "){
+                                     color = input$colorby_scatter) ) +
+          geom_point( aes(text = legend),
+                      shape = input$type_scatter,
+                      size = input$size_scatter) 
+      }else if(input$typeby_scatter != " "){
         p <- ggplot( data, aes_string(x = x,
                                       y = y,
-                                      shape = input$typeby) ) +
-          geom_point( color = input$color,
-                      size = input$size)+
-          ggtitle(input$scatter_title)+
-          xlab(input$scatter_xlab) +
-          ylab(input$scatter_ylab)
+                                      shape = input$typeby_scatter) ) +
+          geom_point( aes(text = legend),
+                      color = input$color_scatter,
+                      size = input$size_scatter)
       }else{
         p <- ggplot( data, aes_string(x = x,
-                                      y = y)) +
-          geom_point( color = input$color,
-                      shape = input$type,
-                      size = input$size) +
-          # xlim(c( min(data$x), max(data$x)*2)) +
-          # ylim(c( min(data$y), max(data$y)*2)) +
-          ggtitle(input$scatter_title)+
-          xlab(input$scatter_xlab) +
-          ylab(input$scatter_ylab)
-        p$elementId <- NULL
-        ggplotly(p)
+                                      y = y))+
+          geom_point( aes(text = legend),
+                      color = input$color_scatter,
+                      shape = input$type_scatter,
+                      size = input$size_scatter)
       }
-      
+      p$elementId <- NULL
+      ggplotly(p  +
+               xlim(input$xlim_scatter[1], input$xlim_scatter[2]) +
+               ylim(input$ylim_scatter[1], input$ylim_scatter[2]) +
+               ggtitle(input$scatter_title)+
+               xlab(input$scatter_xlab) +
+               ylab(input$scatter_ylab) +
+               theme(axis.title.x = element_text(size = input$scatter_xlab_size),
+                     axis.title.y = element_text(size = input$scatter_ylab_size), 
+                     plot.title = element_text(size = input$scatter_title_size)),
+               tooltip = "text" )
     }
   })
   
   #When diplay button in scatter plot clicked, will show the plot
   observeEvent(input$doScatter, {
     output$scatter <- renderPlotly({
-      drawplot()
+      drawScatter()
     })
   })
+  
+  # values to recover when you charge a saved session
+  onRestore(function(state){
+    values <- reactiveValues(color = NULL, op1 = NULL, op2 = NULL, op3 = NULL, op4 = NULL)
+    values$color <- state$input$color_scatter
+    values$op1 <- state$input$y_expression_scatter
+    values$op2 <- state$input$x_expression_scatter
+    values$op3 <- state$input$colorby_scatter
+    values$op4 <- state$input$typeby_scatter
+    values$heat_genlist <- state$input$genlist
+    values$venn_genlist1 <- state$input$genlist1
+    values$venn_genlist2 <- state$input$genlist2
+    values$venn_genlist3 <- state$input$genlist3
+    values$venn_genlist4 <- state$input$genlist4
+    values$ylim_scatter <- c(state$input$ylim_scatter[1],state$input$ylim_scatter[2])
+    values$xlim_scatter <- c(state$input$xlim_scatter[1],state$inputxylim_scatter[2])
+    reactiveValuesToList(input)
+    observe({
+      updateSelectInput(session, inputId = "y_expression_scatter", selected = values$op1)
+      updateSelectInput(session, inputId = "x_expression_scatter", selected = values$op2)
+      updateSelectInput(session, inputId = "colorby_scatter", selected = values$op3)
+      updateSelectInput(session, inputId = "typeby_scatter", selected = values$op4)
+      updateColourInput(session, inputId = "color_scatter", value = values$color)
+      updateTextAreaInput(session, inputId = "genlist", value = values$heat_genlist)
+      updateTextAreaInput(session, inputId = "genlist1", value = values$venn_genlist1)
+      updateTextAreaInput(session, inputId = "genlist2", value = values$venn_genlist2)
+      updateTextAreaInput(session, inputId = "genlist3", value = values$venn_genlist3)
+      updateTextAreaInput(session, inputId = "genlist4", value = values$venn_genlist4)
+      updateSliderInput(session, inputId = "ylim_scatter", min = -10, max = 20, value = c(values$ylim_scatter[1],values$ylim_scatter[2]) )
+      updateSliderInput(session, inputId = "xlim_scatter", min = -10, max = 20, value = c(values$xlim_scatter[1],values$xlim_scatter[2]) )
+    })
+  })
+  
+  
 })#Close server
