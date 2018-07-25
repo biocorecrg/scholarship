@@ -1,2 +1,2 @@
-# scholarship
+# R tools
 First Shiny project.
