@@ -26,6 +26,9 @@ shinyUI( ui <- function(request){
                                       color: #707B7C;
                                       text-align: center;
                                     }
+                                    #tabla{
+                                      position: auto;
+                                    }
                                      ")
     ),
     header = 
@@ -38,6 +41,64 @@ shinyUI( ui <- function(request){
           ),box(width = 1,
             bookmarkButton("Save session")
           )
+    ),
+    tabPanel( title = "Help", icon = icon("fas fa-info-circle", class = "fa-2x"),
+              box(width = 4,
+                  h1("Heatmap instructions"),
+                  dropdownButton(
+                    circle = TRUE, status = "secundary", icon = icon("fas fa-braille"), width = "31vw",
+                    tooltip = tooltipOptions(title = "Click to see instructions !"), size = "sm",
+                    box(width = 12,
+                        p("· This tool allows you to generate and customize heatmaps."),br(),
+                        p("· The data requested for generate heatmaps is a data frame of gene expresion, with at least one annotation's column."),br(),
+                        p("· The data frame should not be longer than 10000 rows, otherwise, you can select an annotation's column to make a selection of genes to display."),br(),
+                        p("· You can upload a filter file with selection of genes or paste directly in the text area."),br(),
+                        p("· In order to display the heatmap, button will be disabled at least the data frame or selection it is 2000 or less rows."),br(),
+                        p("· Once you display, you can change the data frame or the selection to show different data, but TAKE CARE. If you clear selection, and you already changed data frame and this one is larger than 10000 row, heatmap won't be available. "),br(),
+                        icon("gear"),
+                        p("· the clustering and dendogram buttons will be enable/disable to click depending on number of rows of your data, because a long data frame would make a long process to clustering"),br(),
+                        p("· Variance input initialize to 0, but it's acording to the data. That way you can make selection of data to show by variance."),br(),
+                        p("· For a better costumization of your heatmap, you can select colors, make scale by row or column, hide row label and change the size of the labels."),br(),
+                        p("· Once you click display, just wait. Clicking again will hide download options."),br(),
+                        p("· You can select the format file, or directly download png of the graph in the plot widget."),br(),
+                        p("· For every tool you have the chance to save the state and restore it after, using the provided link from \"Save Session\" button.", style = "color: green;")
+                    )
+                  )
+              ),
+              box(width = 4,
+                  h1("Venn Diagram instructions"),
+                  dropdownButton(
+                    circle = TRUE, status = "secundary", icon = icon("adjust"), width = "31vw",
+                    tooltip = tooltipOptions(title = "Click to see instructions !"), size = "sm",
+                    box(width = 12,
+                        p("· This tool allows you to find differences between even four lists and generate a venn Diagram."),br(),
+                        p("· You can upload a list file, or paste list in the text area, one per row."),br(),
+                        p("· To add new list, you can click the + button."),br(),icon("fas fa-plus"),
+                        p("· At least, one list should be introduced to show display button."),br(),
+                        p("· Once you click display button, you have a graph and with options to download, select section, and show a list with data selected."),br(),
+                        p("· You can change the name of lists and color of sections."),br(),
+                        p("· You can select the format file to download the image, and size of this one."),br(),
+                        p("· For every tool you have the chance to save the state and restore it after, using the provided link from \"Save Session\" button.", style = "color: green;")
+                    )
+                  )
+              ),
+              box(width = 4,
+                  h1("Scatter plot instructions"),
+                  dropdownButton(
+                    circle = TRUE, status = "secundary", icon = icon("fas fa-industry"), width = "31vw",
+                    tooltip = tooltipOptions(title = "Click to see instructions !"), size = "sm",
+                    box(width = 12,
+                        p("· This tool requires a dataframe of gene expression to calculate data and generate a scatter plot."),br(),
+                        p("· The uploaded dataframe will be threated and you will be able to select the column to represent in x and y axis, by numerics columns inside the dataframe."),br(),
+                        icon("gear"),p("· You can, set up the limits, change name and size of axis labels or title, choose colour or shape or size of the points, and finally group the expressed points for colour or shape."),br(),
+                        p("· The button \"Display\" will be enable to click unless the dataframe it's bigger than 5000 genes, TAKE CARE."),br(),
+                        p("· Once you click the button, if colour by or type by selects were filled, you may wait until plot calculate and it generate."), br(),
+                        p("· You will be able to show the correlation, p-value inside the plot. Show a table with (y = a + bx) function data, and download it in \"pdf\", \"png\", \"jpeg\" format."),br(),
+                        p("· For every tool you have the chance to save the state and restore it after, using the provided link from \"Save Session\" button.", style = "color: green;")
+                    )
+                  )
+              )
+      
     ),
     ##Heatmap view
     tabPanel(title = "Heatmap", icon = icon("fas fa-braille", class = "fa-2x"),
@@ -69,6 +130,7 @@ shinyUI( ui <- function(request){
                                         inline = TRUE),
                      checkboxGroupInput("dendogram", "Show/hide dendograms", choices = c("Rowv", "Colv"),
                                         inline = TRUE),
+                     sliderInput("variance", "Variance", min = 0, max = 1, value = 0),
                      selectInput("scalefull", "Scale", choices = c("none", "row", "column"), selected = "none"),
                      checkboxGroupInput("samples", "Show/hide samples", choices= c("A","B","C"),
                                   inline = TRUE),
@@ -100,18 +162,6 @@ shinyUI( ui <- function(request){
             ),
              box( width = 9, style = "height: 88vh; border-radius: 1em;",
                   box(width = 6,
-                      h1("Instructions", style = "text-align: center;"),
-                      hr(),
-                      box(width = 12,
-                          p("1 - The uploaded file should not be of the full genes."),
-                          p("2 - Please try to upload file with a maximum of 10000 genes or display button will be disable."),
-                          p("3 - You can add a filter file with selected genes or paste directly in the text area."),
-                          p("4 - Selection of genes must match with id column, so you should choose type of selection."),
-                          p("5 - Input in text area should be separated 1 per line."),
-                          p("6 - Clustering and dendogram option buttons will be disable with files above 5000 genes.")
-                      )
-                  ),
-                  box(width = 6,
                     box(width = 6,
                         h1("View options"),
                         hr(),
@@ -129,14 +179,17 @@ shinyUI( ui <- function(request){
                           h1("Download options"),
                           hr(),
                           box(width = 12,
-                            radioButtons("download_type_heat", "Select type of file:", choices = c("pdf", "png", "jpeg"), inline = TRUE),
+                            radioButtons("download_type_heat", "Select type of file:", choices = c("png", "pdf", "jpeg"), inline = TRUE),
                             downloadBttn("downloadHeat", "Save Heatmap", size = "sm", style = "jelly")
                           )
                         )
                       )
-                  ),
-                  box(width = 11,
+                  )
+                  ,box(width = 11,
                     plotlyOutput("distPlot")
+                  )
+                  ,box(width = 12,
+                      div(id = "tabla", verbatimTextOutput("selection"))
                   )
              )
     ),
@@ -185,13 +238,6 @@ shinyUI( ui <- function(request){
                             colourInput("col4", "Select colour", "yellow", allowTransparent = TRUE)
                           )
                         )
-                        # tags$div(id = 'input2'),
-                        # tags$div(id = 'input3'),
-                        # tags$div(id = 'input4'),
-                         #style = "border-right: 4px solid #D5DBDB; border-top: 4px solid #D5DBDB; 
-                        #               border-top-right-radius: 1em; border-bottom-right-radius: 1em; 
-                        #               padding: 0.5em; margin-bottom: 1em; border-bottom: 4px solid #D5DBDB;
-                        #               height: 91vh;"
                       )
                   ),
              box( width = 6, style = "height: 88vh; border-radius: 1em;",
@@ -269,7 +315,32 @@ shinyUI( ui <- function(request){
             condition = "input.doScatter == false",
             box( actionBttn("doScatter", "Display", icon("bar-chart-o"), style = "jelly", size = "sm"))
           ),
-          box (width = 12, plotlyOutput("scatter",height = "80vh"))
+          conditionalPanel(
+            condition = "input.doScatter == true",
+            box (width = 12, 
+                 box(width = 2,
+                     materialSwitch("cor_scatter", "Show correlation", status = "primary")
+                 ),
+                 box(width = 2,
+                     materialSwitch("p_value_scatter", "Show p-Value", status = "primary")
+                 ),
+                 box(width = 2,
+                     materialSwitch("stats_table", "Show table", status = "primary")
+                 ),
+                 box(width = 4,
+                       h1("Download options"),
+                       hr(),
+                       box(width = 6,
+                           selectInput("download_type_scatter", "Select type of file:", choices = c("pdf", "png", "jpeg"))
+                       ),
+                       box(width = 6,
+                           downloadBttn("downloadScatter", "Save plot", size = "sm", style = "jelly")
+                       )
+                 ),
+                 dataTableOutput("summaryStats", width = 600),
+                 plotlyOutput("scatter",height = "80vh")
+                 )
+          )
       )
     ),
     tags$script( HTML(

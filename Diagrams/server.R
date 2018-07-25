@@ -117,11 +117,12 @@ shinyServer(function(input, output, session) {
       }
       updateSliderInput(session, "minInput", min = round(min(df)-median(df)), max = min(df), value = min(df))
       updateSliderInput(session, "maxInput", min = round(max(df)), max = round(max(df)+median(df)) , value = round(max(df)) )
+      updateSliderInput(session, "variance", min = min(apply(df, 1, var)), max = max(apply(df, 1, var)), step = 0.001, value = 0)
     }
     
   })
   
-  output$time <- renderText({
+  output$time <- renderPrint({
     df <- finalInput()
     message = ""
     if(!is.null(df)){
@@ -129,7 +130,7 @@ shinyServer(function(input, output, session) {
         message <- "This action can take until 5 minutes, be patient."
       }
     }
-    print (message)
+    if(message != "") cat (message)
   })
   
   #Treatment of list for showing according to radioButton selection in venn Diagram panel
@@ -245,6 +246,7 @@ shinyServer(function(input, output, session) {
     })
     
     thread <- finalInput() #Get matrix from "Treatment of heatmap panel textArea"
+    thread <- thread[apply(thread, 1, var) >= input$variance,]
     if(!is.null(thread)){
       #CONTROL HIDE / SHOW ROW LABEL
       if(input$rowlabel){
@@ -298,23 +300,37 @@ shinyServer(function(input, output, session) {
                         labCol = colnames(thread),
                         symm = FALSE,
                         plot_method = "plotly",
-                        margins = c(160,250,50,0) 
+                        margins = c(160,250,50,0)
       ) %>% layout( width = input$width, height = input$height)
-        
       plot$elementId <- NULL
+      plot <- ggplotly(plot) %>% layout(dragmode = "select")
       uiState$readyCheck <- uiState$readyFlag
-      return (plot)
+      print(plot)
       
     }
   })
   
-  #Observer for contrast button in Heatmap Panel
+  #Observer for display button in Heatmap Panel
   observeEvent(input$heat, {
     #Draw heatmap in ui
     output$distPlot <- renderPlotly({
-      drawHM()
-    })
-    
+      plot <- drawHM()
+      if (is.null(plot)) plotly_empty()
+      plot
+  })
+  
+  output$downloadHeat <- downloadHandler(
+    filename = function(){paste("heatmap", input$download_type_heat, sep = ".")},
+    content = function(file){
+      p <- drawHM()
+      export(p, file)
+    }
+  )
+       
+  output$selection <- renderPrint({
+    data <- event_data("plotly_selected")
+    if(!is.null(data)) data
+  })
    #Control error message for heatmap Panel
    output$error_content <- renderText({
      if(!is.null(input$heat_genlist)){
@@ -332,76 +348,6 @@ shinyServer(function(input, output, session) {
    })
    
    #Closing event
-  })
-  
-  output$downloadHeat <- downloadHandler(
-    filename = function(){
-      paste("heatmap", input$download_type_heat, sep = ".")
-      },
-    content = function(file){
-      thread <- finalInput() #Get matrix from "Treatment of heatmap panel textArea"
-      #CONTROL HIDE / SHOW ROW LABEL
-      if(input$rowlabel){
-        label <- NULL
-      }else{
-        label <- rownames(thread)
-      }
-      if(!is.null(thread)){
-        
-        #Control clustering
-        boolCol <- NULL
-        boolRow <- NULL
-        if(length(input$clustering) == 1){ 
-          if(input$clustering == "Colv")   boolCol <- TRUE
-          
-          if(input$clustering == "Rowv")   boolRow <- TRUE
-        }
-        if(length(input$clustering) == 2){
-          boolCol <- TRUE
-          boolRow <- TRUE
-        }
-        if(is.null(input$clustering)){
-          boolRow <- FALSE
-          boolCol <- NULL
-        }
-        #end Control clustering
-        #Control show/hide dendogram
-        if(length(input$dendogram) == 1){
-          if(input$dendogram == "Rowv")   show_dendo <- "row"
-          
-          if(input$dendogram == "Colv")   show_dendo <- "column"
-        }
-        if(length(input$dendogram) == 2) show_dendo <- "both"
-        if(is.null(input$dendogram)) show_dendo <- "none"
-        #end Control show/hide dendogram
-        
-        color.palette  <- colorRampPalette(c(input$heat_col1, input$heat_col2, input$heat_col3))(256)
-        
-        #end Control show/hide dendogram
-        #Execute graphs
-        #read about the function and parameters https://cran.r-project.org/web/packages/heatmaply/heatmaply.pdf
-        plot <- heatmaply(thread,
-                          main = input$titlematrix,
-                          keysize = 2,
-                          Rowv = boolRow,
-                          Colv = boolCol,
-                          dendrogram = show_dendo,
-                          limits = c(input$minInput,input$maxInput),
-                          col = color.palette,
-                          trace = "none",
-                          scale = input$scalefull,
-                          row_dend_left = F,
-                          labRow = label,
-                          labCol = colnames(thread),
-                          symm = FALSE,
-                          plot_method = "plotly",
-                          margins = c(50,160,50,100)
-        ) %>% layout( width = input$width, height = input$height)
-        
-      }
-  })
-  output$hola <- renderText({
-    print(paste(input$id22[1],input$id22[2]))
   })
   
   #Treatment of input textArea
@@ -586,8 +532,7 @@ shinyServer(function(input, output, session) {
                              fill = listCol[1:length(listVenn)],
                              cex = 2,
                              cat.cex = 1
-                              ))
-  
+                             ))
       dev.off()
   })#close downloadfile
   
@@ -618,7 +563,7 @@ shinyServer(function(input, output, session) {
       }
     }
   })
-  
+  #Observer to change limits inputs, depending from file input.
   observe({
     data <- df()
     if(!is.null(data)){
@@ -635,8 +580,7 @@ shinyServer(function(input, output, session) {
   drawScatter <- reactive({
     data <- df()
     rownames(data) <- data$ensembl_id
-    x <- input$x_expression_scatter
-    y <- input$y_expression_scatter
+    x <- input$x_expression_scatter; y <- input$y_expression_scatter
     anno <- as.vector(colnames(data)[sapply(data, class) == "character"]) # Extract column names in data frame that data is character
     custom_columns <- "" 
     for ( i in 1:length(anno)){ 
@@ -645,48 +589,75 @@ shinyServer(function(input, output, session) {
     }
     #Concatenate custom_columns value to te rest of data to show in legend.
     legend <- paste(custom_columns, "<br>Sample y: ", data[, y], "<br>Sample x: ", data[, x] )
+    correlation <- ""
+    p_value <- ""
+    if (input$cor_scatter) correlation <- paste("Correlation: ",formatC(cor.test(data[,x],data[,y])$estimate, digit = 4, format = "f"))
+    if (input$p_value_scatter) p_value <- paste("P-Value: ", formatC(cor.test(data[,x],data[,y])$p.value, digits = 4, format = "e" ) )
+    
+    #read more about the function https://cran.r-project.org/web/packages/ggplot2/ggplot2.pdf
     if(!is.null(data)){
       if( input$typeby_scatter != " " & input$colorby_scatter != " "){
-        #read more about the function https://cran.r-project.org/web/packages/ggplot2/ggplot2.pdf
-        p <- ggplot( data, aes_string(x = x,
-                                      y = y,
-                                      color = input$colorby_scatter,
-                                      shape = input$typeby_scatter) ) +
-          geom_point( aes(text = legend),
-                      size = input$size_scatter) 
+        p <- ggplot( data, aes_q(x = as.name(x),
+                                 y = as.name(y)) ) +
+          geom_point( aes_q(text = legend,
+                          color = as.name(input$colorby_scatter),
+                          shape = as.name(input$typeby_scatter)),
+                      size = input$size_scatter) +
+          
+          annotate("text", x =1, y = max(data[,y]-1), label = correlation) + annotate("text", x =1, y = max(data[,y]-2), label = p_value)
       }else if(input$colorby_scatter != " "){
-        p <-ggplot( data, aes_string(x = x,
-                                     y = y,
-                                     color = input$colorby_scatter) ) +
-          geom_point( aes(text = legend),
+        p <-ggplot( data, aes_q(x = as.name(x),
+                                y = as.name(y)) ) +
+          geom_point( aes_q(text = legend,
+                          color = as.name(input$colorby_scatter)),
                       shape = input$type_scatter,
-                      size = input$size_scatter) 
+                      size = input$size_scatter) +
+          annotate("text", x =1, y = max(data[,y]-1), label = correlation) + annotate("text", x =1, y = max(data[,y]-2), label = p_value)
       }else if(input$typeby_scatter != " "){
-        p <- ggplot( data, aes_string(x = x,
-                                      y = y,
-                                      shape = input$typeby_scatter) ) +
-          geom_point( aes(text = legend),
+        p <- ggplot( data, aes_q(x = as.name(x),
+                                      y = as.name(y)) ) +
+          geom_point( aes_q(text = legend,
+                            shape = as.name(input$typeby_scatter)),
                       color = input$color_scatter,
-                      size = input$size_scatter)
+                      size = input$size_scatter) +
+          annotate("text", x =1, y = max(data[,y]-1), label = correlation) + annotate("text", x =1, y = max(data[,y]-2), label = p_value)
       }else{
-        p <- ggplot( data, aes_string(x = x,
-                                      y = y))+
-          geom_point( aes(text = legend),
+        p <- ggplot( data, aes_q(x = as.name(x),
+                                 y = as.name(y)) )+
+          geom_point( aes_q(text = legend),
                       color = input$color_scatter,
                       shape = input$type_scatter,
-                      size = input$size_scatter)
+                      size = input$size_scatter) +
+        annotate("text", x =1, y = max(data[,y]-1), label = correlation) + annotate("text", x =1, y = max(data[,y]-2), label = p_value)
       }
       p$elementId <- NULL
+      #Set up plot customize of labels, title and limits.
       ggplotly(p  +
-               xlim(input$xlim_scatter[1], input$xlim_scatter[2]) +
-               ylim(input$ylim_scatter[1], input$ylim_scatter[2]) +
-               ggtitle(input$scatter_title)+
-               xlab(input$scatter_xlab) +
-               ylab(input$scatter_ylab) +
+               xlim(input$xlim_scatter[1], input$xlim_scatter[2]) + ylim(input$ylim_scatter[1], input$ylim_scatter[2]) +
+               ggtitle(input$scatter_title)+ xlab(input$scatter_xlab) + ylab(input$scatter_ylab) +
                theme(axis.title.x = element_text(size = input$scatter_xlab_size),
                      axis.title.y = element_text(size = input$scatter_ylab_size), 
                      plot.title = element_text(size = input$scatter_title_size)),
                tooltip = "text" )
+    }
+  })
+  
+  #This output is for a linear regretion table
+  output$summaryStats <- renderDataTable({
+    df <- df()
+    x <- input$x_expression_scatter
+    y <- input$y_expression_scatter
+    #if button for show and data frame are up, then calculate p-value and estimate and create a new data frame with it.
+    if (input$stats_table){
+      if(!is.null(df)){
+        stats <- lm(df[, y] ~ df[, x])
+        
+        a <- c(formatC(summary(stats)$coefficients[,"Estimate"][1], digits = 4, format = "f"), formatC(summary(stats)$coefficient[,"Pr(>|t|)"][1], digits = 4, format = "e"))
+        
+        b <- c(formatC(summary(stats)$coefficients[,"Estimate"][2], digits = 4, format = "f"), formatC(summary(stats)$coefficient[,"Pr(>|t|)"][2], digits = 4, format = "e"))
+        
+        datatable(stats_table <- data.frame(a = a, b = b, row.names = c("Estimate", "P-Value")))
+      }
     }
   })
   
@@ -696,6 +667,16 @@ shinyServer(function(input, output, session) {
       drawScatter()
     })
   })
+  
+  
+  #Download ScatterPlot 
+  output$downloadScatter <- downloadHandler(
+    filename = function(){paste("scatterPlot", input$download_type_scatter, sep = "." )},
+    content = function(file) {
+      p <- drawScatter()
+      export(p, file)
+  })#close downloadfile
+  
   
   # values to recover when you charge a saved session
   onRestore(function(state){
