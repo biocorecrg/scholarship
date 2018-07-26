@@ -303,7 +303,7 @@ shinyServer(function(input, output, session) {
                         margins = c(160,250,50,0)
       ) %>% layout( width = input$width, height = input$height)
       plot$elementId <- NULL
-      plot <- ggplotly(plot) %>% layout(dragmode = "select")
+      plot <- ggplotly(plot)
       uiState$readyCheck <- uiState$readyFlag
       print(plot)
       
