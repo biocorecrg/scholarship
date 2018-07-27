@@ -26,20 +26,25 @@ shinyUI( ui <- function(request){
                                       color: #707B7C;
                                       text-align: center;
                                     }
-                                    #tabla{
+                                    #help{
                                       position: auto;
+                                      bottom: 0px;
                                     }
                                      ")
     ),
     header = 
       box(width = 12,
           box(width = 11,
+            div(id = "help",
+                p("If you want to try the app and you don't have data files, you can download it from "),
+                a("here", href="https://github.com/ogonza46/scholarship/tree/master/Diagrams/www/files"), style = "float:left;"
+            ),
             div(class = "busy",
                 p("Please wait, the server is busy..."),
                 textOutput("time")
             )
           ),box(width = 1,
-            bookmarkButton("Save session")
+            bookmarkButton("Save session", status = "success")
           )
     ),
     tabPanel( title = "Help", icon = icon("fas fa-info-circle", class = "fa-2x"),
@@ -161,7 +166,7 @@ shinyUI( ui <- function(request){
                )
             ),
              box( width = 9, style = "height: 88vh; border-radius: 1em;",
-                  box(width = 6,
+                  box(width = 9,
                     box(width = 6,
                         h1("View options"),
                         hr(),
@@ -187,9 +192,6 @@ shinyUI( ui <- function(request){
                   )
                   ,box(width = 11,
                     plotlyOutput("distPlot")
-                  )
-                  ,box(width = 12,
-                      div(id = "tabla", verbatimTextOutput("selection"))
                   )
              )
     ),

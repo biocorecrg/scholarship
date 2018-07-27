@@ -6,7 +6,7 @@ MAINTAINER Oliver Gonzalez <ogonzalez@crg.eu>
 ARG SHINYPORT=7165
 
 # Install external dependencies 
-RUN apt-get update -qq && apt-get install -y --no-install-recommends python curl libcurl4-openssl-dev libssl-dev libsqlite3-dev libxml2-dev qpdf git
+RUN apt-get update -qq && apt-get install -y --no-install-recommends curl libcurl4-openssl-dev libssl-dev libsqlite3-dev libxml2-dev git
 
 RUN mkdir /usr/local/shiny
 WORKDIR /usr/local/shiny

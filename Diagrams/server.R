@@ -303,7 +303,7 @@ shinyServer(function(input, output, session) {
                         margins = c(160,250,50,0)
       ) %>% layout( width = input$width, height = input$height)
       plot$elementId <- NULL
-      plot <- ggplotly(plot) %>% layout(dragmode = "select")
+      plot <- ggplotly(plot)
       uiState$readyCheck <- uiState$readyFlag
       print(plot)
       
@@ -326,26 +326,22 @@ shinyServer(function(input, output, session) {
       export(p, file)
     }
   )
-       
-  output$selection <- renderPrint({
-    data <- event_data("plotly_selected")
-    if(!is.null(data)) data
-  })
-   #Control error message for heatmap Panel
-   output$error_content <- renderText({
-     if(!is.null(input$heat_genlist)){
-       df <- finalInput() #load DATA.FRAME
-       genlist <- strsplit(input$genlist, "\n")[[1]]  
-       if(any(genlist %in% rownames(df))){
-         return (NULL)
-       }else{
-        return (createAlert(session, "error_message",
-                            content = "This annotation file doesn't match with given matrix",
-                            style = "warning"))
-       }
+  
+  #Control error message for heatmap Panel
+  output$error_content <- renderText({
+   if(!is.null(input$heat_genlist)){
+     df <- finalInput() #load DATA.FRAME
+     genlist <- strsplit(input$genlist, "\n")[[1]]  
+     if(any(genlist %in% rownames(df))){
+       return (NULL)
+     }else{
+      return (createAlert(session, "error_message",
+                          content = "This annotation file doesn't match with given matrix",
+                          style = "warning"))
      }
-     return (NULL)
-   })
+   }
+   return (NULL)
+  })
    
    #Closing event
   })
