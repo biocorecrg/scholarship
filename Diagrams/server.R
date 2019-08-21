@@ -301,9 +301,10 @@ shinyServer(function(input, output, session) {
                         symm = FALSE,
                         plot_method = "plotly",
                         margins = c(160,250,50,0)
-      ) %>% layout( width = input$width, height = input$height)
+      ) 
+      #%>% layout( width = input$width, height = input$height)
       plot$elementId <- NULL
-      plot <- ggplotly(plot)
+      plot <- ggplotly(plot, width = input$width, height = input$height)
       uiState$readyCheck <- uiState$readyFlag
       print(plot)
       
@@ -320,10 +321,12 @@ shinyServer(function(input, output, session) {
   })
   
   output$downloadHeat <- downloadHandler(
-    filename = function(){paste("heatmap", input$download_type_heat, sep = ".")},
+    filename = function(){
+      paste("heatmap", input$download_type_heat, sep = ".")
+    },
     content = function(file){
       p <- drawHM()
-      export(p, file)
+      export(p, file) # change for orca ?
     }
   )
   

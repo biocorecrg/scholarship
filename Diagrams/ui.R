@@ -36,7 +36,7 @@ shinyUI( ui <- function(request){
       box(width = 12,
           box(width = 11,
             div(id = "help",
-                p("If you want to try the app and you don't have data files, you can download it from "),
+                p("If you want to try the app and you don't have data files, you can download them from "),
                 a("here", href="https://github.com/ogonza46/scholarship/tree/master/Diagrams/www/files"), style = "float:left;"
             ),
             div(class = "busy",
@@ -55,10 +55,10 @@ shinyUI( ui <- function(request){
                     tooltip = tooltipOptions(title = "Click to see instructions !"), size = "sm",
                     box(width = 12,
                         p("· This tool allows you to generate and customize heatmaps."),br(),
-                        p("· The data requested for generate heatmaps is a data frame of gene expresion, with at least one annotation's column."),br(),
+                        p("· The data requested to generate heatmaps is a data frame / matrix of gene expression, with at least one column of annotation."),br(),
                         p("· The data frame should not be longer than 10000 rows, otherwise, you can select an annotation's column to make a selection of genes to display."),br(),
-                        p("· You can upload a filter file with selection of genes or paste directly in the text area."),br(),
-                        p("· In order to display the heatmap, button will be disabled at least the data frame or selection it is 2000 or less rows."),br(),
+                        p("· You can upload a file with a selection of genes in order to filter the data. You can also directly paste the selection in the text area."),br(),
+                        p("· In order to display the heatmap, button will be disabled if the data frame or selection has a maximum of 2000 rows."),br(),
                         p("· Once you display, you can change the data frame or the selection to show different data, but TAKE CARE. If you clear selection, and you already changed data frame and this one is larger than 10000 row, heatmap won't be available. "),br(),
                         icon("gear"),
                         p("· the clustering and dendogram buttons will be enable/disable to click depending on number of rows of your data, because a long data frame would make a long process to clustering"),br(),
@@ -144,6 +144,7 @@ shinyUI( ui <- function(request){
                      materialSwitch("rowlabel", "Hide row label", status = "primary"),
                      box(width = 12,
                          h1("Colour options", style = "text-align: left;"),
+                         # selection of colours
                          box(width = 3,
                              colourInput("heat_col1", "Select colour", "green", allowTransparent = TRUE)
                          ),
@@ -199,7 +200,7 @@ shinyUI( ui <- function(request){
     tabPanel(title = "VennDiagram", icon = icon("adjust", class = "fa-2x")
              ##Container box
              ,box( style = "color: #5DADE2;", width = 6, style = "border-radius: 1em;",
-                   #Inputs for selected genes
+                   #Input boxes for selected genes
                    box( width = 12, h1("Configure your plot"), 
                         box(id = "input1", width = 6,  
                              textInput("title_genlist1", "Name the selection", "A"),
