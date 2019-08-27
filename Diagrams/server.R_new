@@ -1,0 +1,10 @@
+#source("global.R")
+
+# Define server logic
+shinyServer(function(input, output, session) {
+  
+
+  
+  
+  
+})#Close server
